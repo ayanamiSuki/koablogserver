@@ -16,4 +16,4 @@ npm start
 ```
 
 ### Customize configuration
-See [Configuration Reference](https://aysuki.com/).
+See [个人博客](https://aysuki.com/).
