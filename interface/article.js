@@ -1,7 +1,7 @@
-import Router from 'koa-router';
+import Router from '@koa/router';
 import Article from '../dbs/models/article';
 import sillyDatetime from 'silly-datetime';
-import multer from 'koa-multer';
+import multer from '@koa/multer';
 
 let router = new Router({
   prefix: '/article',

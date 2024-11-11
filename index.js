@@ -48,13 +48,14 @@ async function start() {
   );
   app.use(json());
   //连接数据库
+  // 升级了koa的版本，很多原来的配置无需操作
   //DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead
-  mongoose.set('useCreateIndex', true);
+  // mongoose.set('useCreateIndex', true);
   //Mongoose: `findOneAndUpdate()` and `findOneAndDelete()` without the `useFindAndModify` option set to false are deprecated.
-  mongoose.set('useFindAndModify', false);
+  // mongoose.set('useFindAndModify', false);
   mongoose.connect(dbConfig.dbs, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    // useNewUrlParser: true,
+    // useUnifiedTopology: true,
   });
   //身份验证
   app.use(passport.initialize());

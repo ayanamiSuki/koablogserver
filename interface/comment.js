@@ -1,4 +1,4 @@
-import Router from 'koa-router'
+import Router from '@koa/router'
 import Comment from '../dbs/models/comment'
 import Users from '../dbs/models/users'
 import sillyDatetime from 'silly-datetime'
