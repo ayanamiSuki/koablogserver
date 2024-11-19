@@ -16,11 +16,11 @@ passport.use(
         }
     })
 );
-
+// 序列化ctx.login()触发
 passport.serializeUser(function (user, done) {
     done(null, user);
 });
-
+// 反序列化（请求时，session中存在"passport":{"user":"1"}触发）
 passport.deserializeUser(function (user, done) {
     return done(null, user);
 });

@@ -20,6 +20,8 @@ const dbConfig = {
         return new Date().getTime() + 60 * 60 * 1000 * 5;
       };
     },
+    user: `244802956@qq.com`,
+    pass: `rzsbjxfujrijbjee`
   },
 };
 export default dbConfig;

@@ -5,6 +5,10 @@ import User from '../dbs/models/users'
 import Passport from './utils/passport'
 import Email from '../dbs/config'
 import axios from './utils/axios'
+import jwt from 'jsonwebtoken'
+import { jwtConfig } from '../common/config'
+import crypto from 'crypto'
+import { resDataFailed, resOk } from '../common/utils'
 let router = new Router({
     prefix: '/users'
 })
@@ -81,35 +85,63 @@ router.post('/signup', async ctx => {
     }
 
 })
+// 用户登录
+// router.post('/signin_old', async (ctx, next) => {
 
+//     return Passport.authenticate('local', function (err, user, info, status) {
+//         if (err) {
+//             ctx.body = {
+//                 code: -1,
+//                 msg: err
+//             };
+//         } else {
+//             if (user) {
+//                 ctx.body = {
+//                     code: 0,
+//                     msg: "登录成功",
+//                     user
+//                 };
+//                 return ctx.login(user);
+//             } else {
+//                 ctx.body = {
+//                     code: 1,
+//                     // msg: info,
+//                     // 用户信息和私钥
+//                     body: jwt.sign(res, 'test', {
+//                         expiresIn: '2h', // 过期时间2小时
+//                     }),
+//                 };
+//             }
+//         }
+//     })(ctx, next)
+
+// })
+
+//用户登录新
 router.post('/signin', async (ctx, next) => {
-
-    return Passport.authenticate('local', function (err, user, info, status) {
-        if (err) {
-            ctx.body = {
-                code: -1,
-                msg: err
-            };
-        } else {
-            if (user) {
-                ctx.body = {
-                    code: 0,
-                    msg: "登录成功",
-                    user
-                };
-                return ctx.login(user);
-            } else {
-                ctx.body = {
-                    code: 1,
-                    msg: info
-                };
-            }
+    const data = ctx.request.body;
+    if (!data.username || !data.password) {
+        return ctx.body = {
+            code: "-1",
+            msg: "参数不合法"
         }
-    })(ctx, next)
-
+    }
+    const result = await User.findOne({ username: data.username, password: data.password });
+    // const result = userList.find(item => item.username === data.username && item.password === crypto.createHash('md5').update(data.password).digest('hex'))
+    if (result) {
+        const token = jwt.sign(
+            {
+                name: result.username,
+                _id: result._id
+            },
+            jwtConfig.tokenKey, // secret
+            { expiresIn: '2h' } // 60 * 60 s
+        );
+        return ctx.body = resOk({ msg: `登录成功`, data: token })
+    } else {
+        return ctx.body = resDataFailed('用户名或密码错误')
+    }
 })
-
-
 router.post("/changePass", async ctx => {
     let { username, email, password, code } = ctx.request.body;
     if (code) {
@@ -117,26 +149,14 @@ router.post("/changePass", async ctx => {
         if (code == saveCode) {
             let result = await User.findOneAndUpdate({ username }, { password }, { 'new': true });
             if (result) {
-                ctx.body = {
-                    code: 0,
-                    msg: '修改成功',
-                    data: ''
-                }
+                return ctx.body = resOk({ msg: `修改成功`, })
             }
 
         } else {
-            ctx.body = {
-                code: -1,
-                msg: '验证码错误'
-            }
-            return false;
+            return ctx.body = resDataFailed('验证码错误')
         }
     } else {
-        ctx.body = {
-            code: -1,
-            msg: '验证码不存在'
-        }
-        return false;
+        return ctx.body = resDataFailed('验证码不存在')
     }
 })
 
@@ -176,15 +196,12 @@ router.post("/verify", async (ctx, next) => {
     let mailOption = {
         from: `"认证邮件"<${Email.smtp.user}>`,
         to: ko.email,
-        subject: "<朔月十六夜的狗窝>",
+        subject: "<ayanami的狗窝>",
         html: `欢迎您的注册，可以再窝里面畅所欲言，验证码是${ko.code}，有效期5分钟，请及时填写`
     };
+    let errMsg = null
     await transporter.sendMail(mailOption, (err, info) => {
         if (err) {
-            ctx.body = {
-                code: 0,
-                msg: err
-            };
             return console.log("发送注册邮件失败,原因:" + err);
         } else {
             Store.hmset(
@@ -198,7 +215,13 @@ router.post("/verify", async (ctx, next) => {
             );
         }
     });
-    ctx.body = {
+    if (errMsg) {
+        return ctx.body = {
+            code: 0,
+            msg: "发送注册邮件失败,原因:" + errMsg
+        };
+    }
+    return ctx.body = {
         code: 0,
         msg: "验证码已发送，有效期5分钟"
     };
@@ -220,6 +243,7 @@ router.get("/exit", async (ctx, next) => {
 });
 
 router.get("/getUser", async (ctx, next) => {
+    console.log('isAuthenticated', ctx.isAuthenticated());
     if (ctx.isAuthenticated()) {
         const { username, email, avatar } = ctx.session.passport.user;
         ctx.body = {
@@ -231,7 +255,8 @@ router.get("/getUser", async (ctx, next) => {
         ctx.body = {
             username: "",
             email: "",
-            avatar: ""
+            avatar: "",
+            msg: 'is not Authenticated'
         };
     }
 });

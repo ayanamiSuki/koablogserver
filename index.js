@@ -5,9 +5,10 @@ const consola = require('consola');
 import mongoose from 'mongoose';
 import bodyParser from 'koa-bodyparser';
 import session from 'koa-generic-session';
-// import Redis from 'koa-redis';
+import Redis from 'koa-redis';
 import json from 'koa-json';
 import koaStatic from 'koa-static';
+import koajwt from 'koa-jwt';
 import dbConfig from './dbs/config';
 import passport from './interface/utils/passport';
 import users from './interface/users';
@@ -18,9 +19,8 @@ import picture from './interface/picture';
 import errorHandler from './middleware/errorHandler';
 // 登录验证处理
 import isLoginHandle from './middleware/isLoginHandle';
+import { jwtConfig } from './common/config';
 const app = new Koa();
-
-// Import and Set Nuxt.js options
 
 async function start() {
   const host = process.env.HOST || '127.0.0.1',
@@ -31,21 +31,25 @@ async function start() {
   app.use(koaStatic(__dirname + './static'));
   app.keys = ['aya', 'keys'];
   app.proxy = true;
-  // app.use(
-  //   session({
-  //     key: 'aya',
-  //     prefix: 'aya:uid',
-  //     store: new Redis(),
-  //     cookie: {
-  //       maxAge: 24 * 60 * 60 * 1000, //one day in ms,
-  //     },
-  //   })
-  // );
+
+  app.use(
+    session({
+      key: 'aya',
+      prefix: 'aya:uid',
+      store: new Redis(),
+      cookie: {
+        maxAge: 24 * 60 * 60 * 1000, //one day in ms,
+      },
+    })
+  );
+
   app.use(
     bodyParser({
       extendTypes: ['json', 'form', 'text'],
     })
   );
+
+
   app.use(json());
   //连接数据库
   // 升级了koa的版本，很多原来的配置无需操作
@@ -57,27 +61,47 @@ async function start() {
     // useNewUrlParser: true,
     // useUnifiedTopology: true,
   });
+  /**
+    * app.use(passport.initialize()) 会在请求周期ctx对象挂载以下方法与属性
+    * ctx.state.user 认证用户
+    * ctx.login(user) 登录用户（序列化用户）
+    * ctx.isAuthenticated() 判断是否认证
+*/
   //身份验证
-  app.use(passport.initialize());
-  app.use(passport.session());
+  // app.use(passport.initialize());
+  // app.use(passport.session());
 
   // 错误
   // app.use(errorHandler);
   // 登录验证
   // app.use(isLoginHandle);
 
+
+  // 错误处理
+  app.use((ctx, next) => {
+    return next().catch((err) => {
+      if (err.status === 401) {
+        ctx.status = 401;
+        ctx.body = 'Protected resource, use Authorization header to get access\n';
+      } else {
+        throw err;
+      }
+    })
+  })
+
+  // 注意：放在路由前面
+  app.use(koajwt({
+    secret: jwtConfig.tokenKey
+  }).unless({ // 配置白名单
+    path:jwtConfig.path
+  }))
+
   //路由
   app.use(users.routes()).use(users.allowedMethods());
   app.use(article.routes()).use(article.allowedMethods());
   app.use(comment.routes()).use(comment.allowedMethods());
   app.use(picture.routes()).use(picture.allowedMethods());
-  //=============
-  // app.use(ctx => {
-  //   ctx.status = 200;
-  //   ctx.respond = false; // Bypass Koa's built-in response handling
-  //   ctx.req.ctx = ctx; // This might be useful later on, e.g. in nuxtServerInit or with nuxt-stash
-  //   nuxt.render(ctx.req, ctx.res);status
-  // });
+
 
   app.listen(port, host);
   consola.ready({

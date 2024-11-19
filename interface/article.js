@@ -2,18 +2,19 @@ import Router from '@koa/router';
 import Article from '../dbs/models/article';
 import sillyDatetime from 'silly-datetime';
 import multer from '@koa/multer';
+import { resDataOk } from '../common/utils';
 
-let router = new Router({
+const router = new Router({
   prefix: '/article',
 });
-let storage = multer.diskStorage({
+const storage = multer.diskStorage({
   //文件保存路径
-  destination: function (req, file, cb) {
-    cb(null, 'static/uploads/');
+  destination(req, { originalname }, cb) {         //destination目的地，文件的存储的地方         
+    cb(null, 'static/uploads/')                 //文件存储的路径
   },
   //修改文件名称
-  filename: function (req, file, cb) {
-    var fileFormat = file.originalname.split('.'); //以点分割成数组，数组的最后一项就是后缀名
+  filename(req, { originalname }, cb) {
+    const ext = originalname.split('.').pop() //截取后缀
     cb(null, Date.now() + '.' + fileFormat[fileFormat.length - 1]);
   },
 });
@@ -76,14 +77,8 @@ router.post('/editArticle', async ctx => {
   }
 });
 router.get('/getarticle', async ctx => {
-  let result = await Article.find();
-  ctx.body = {
-    code: 0,
-    msg: '请求成功',
-    data: {
-      result,
-    },
-  };
+  const result = await Article.find();
+  ctx.body = resDataOk(result)
   //   let { page } = ctx.request.query;
   //   let start = (page - 1) * 10;
   //   let result = await Article.find({}, { content: 0 }).sort({ _id: -1 }).skip(start).limit(10);
@@ -154,27 +149,28 @@ router.get('/getSingleArticle', async ctx => {
 });
 
 router.get('/recommend', async ctx => {
-  let count = await Article.countDocuments();
-  let arr = [];
-  let req = [];
-  let addRandom = function () {
-    if (arr.length < 5) {
-      let ramdonCount = random(0, count - 1);
-      if (!arr.includes(ramdonCount)) {
-        arr.push(ramdonCount);
-      }
-      addRandom();
-    }
-  };
-  addRandom();
-  for (let i of arr) {
-    let result = await Article.findOne({}, { content: 0, bg: 0 }).skip(i);
-    req.push(result);
-  }
+  // let count = await Article.countDocuments();
+  // let arr = [];
+  // let req = [];
+  // let addRandom = function () {
+  //   if (arr.length < 5) {
+  //     let ramdonCount = random(0, count - 1);
+  //     if (!arr.includes(ramdonCount)) {
+  //       arr.push(ramdonCount);
+  //     }
+  //     addRandom();
+  //   }
+  // };
+  // addRandom();
+  // for (let i of arr) {
+  //   let result = await Article.findOne({}, { content: 0, bg: 0 }).skip(i);
+  //   req.push(result);
+  // }
   ctx.body = {
     code: 0,
     msg: '请求成功',
-    data: req,
+    // data: req,
+    data: []
   };
 });
 
