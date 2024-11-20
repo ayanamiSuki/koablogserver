@@ -9,17 +9,20 @@ import Redis from 'koa-redis';
 import json from 'koa-json';
 import koaStatic from 'koa-static';
 import koajwt from 'koa-jwt';
+import jwt from 'jsonwebtoken'
 import dbConfig from './dbs/config';
 import passport from './interface/utils/passport';
 import users from './interface/users';
 import article from './interface/article';
 import comment from './interface/comment';
 import picture from './interface/picture';
+import verify from './common/jwtVerify';
 // 错误异常处理
 import errorHandler from './middleware/errorHandler';
 // 登录验证处理
 import isLoginHandle from './middleware/isLoginHandle';
 import { jwtConfig } from './common/config';
+import { resolveAuthorizationHeader } from './common/utils';
 const app = new Koa();
 
 async function start() {
@@ -28,7 +31,7 @@ async function start() {
 
   //设定
 
-  app.use(koaStatic(__dirname + './static'));
+  app.use(koaStatic(__dirname + '/static'));
   app.keys = ['aya', 'keys'];
   app.proxy = true;
 
@@ -89,12 +92,33 @@ async function start() {
     })
   })
 
-  // 注意：放在路由前面
-  app.use(koajwt({
-    secret: jwtConfig.tokenKey
-  }).unless({ // 配置白名单
-    path:jwtConfig.path
-  }))
+  // 鉴权 注意：放在路由前面
+  app.use(async (ctx, next) => {
+    // 检查请求路径是否以'/static/'开头（或根据你的实际静态资源路径调整）
+    if (!ctx.path.startsWith('/uploads/')) {
+      // 非静态资源路径，进行JWT验证
+      await koajwt({
+        secret: jwtConfig.tokenKey
+      }).unless({ // 配置白名单
+        path: jwtConfig.path
+      })(ctx, next);
+    } else {
+      // 静态资源路径，直接放行
+      await next();
+    }
+
+  })
+
+  // 鉴权获取token的数据
+  app.use(async (ctx, next) => {
+    const authorization = resolveAuthorizationHeader(ctx.request.header.authorization)
+
+    if (authorization) {
+      const decodedToken = await verify(authorization, jwtConfig.tokenKey);
+      ctx.state.user = decodedToken;  // 这里的key = 'user'
+    }
+    await next()
+  })
 
   //路由
   app.use(users.routes()).use(users.allowedMethods());

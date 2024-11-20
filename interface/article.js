@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
   //修改文件名称
   filename(req, { originalname }, cb) {
     const ext = originalname.split('.').pop() //截取后缀
-    cb(null, Date.now() + '.' + fileFormat[fileFormat.length - 1]);
+    cb(null, Date.now() + '.' + ext);
   },
 });
 const upload = multer({ storage }); // note you can pass `multer` options here
@@ -26,23 +26,15 @@ router.post('/image', upload.single('file'), async ctx => {
     msg: '上传成功',
     data: {
       // url: 'http://' + ctx.req.headers.host + '/uploads/' + ctx.req.file.filename
-      url: '/uploads/' + ctx.req.file.filename,
+      url: '/uploads/' + ctx.file.filename,
     },
   };
 });
 
 router.post('/uploadarticle', async ctx => {
-  if (!ctx.isAuthenticated()) {
-    ctx.body = {
-      code: -1,
-      msg: '请先登录',
-    };
-    return false;
-  }
   const { title, content, bg } = ctx.request.body;
-  // let time = Date();
   let time = sillyDatetime.format(new Date(), 'YYYY-MM-DD HH:mm');
-  let user = ctx.session.passport.user.username;
+  let user = ctx.state.user.username;
   let article = new Article({
     time,
     user,
@@ -55,20 +47,13 @@ router.post('/uploadarticle', async ctx => {
     ctx.body = {
       code: 0,
       msg: '上传成功',
+      data: true
     };
   }
 });
 router.post('/editArticle', async ctx => {
-  if (!ctx.isAuthenticated()) {
-    ctx.body = {
-      code: -1,
-      msg: '请先登录',
-    };
-    return false;
-  }
   const { title, content, bg, id } = ctx.request.body;
   let result = await Article.findOneAndUpdate({ _id: id }, { title, content, bg }, { new: true });
-
   if (result) {
     ctx.body = {
       code: 0,

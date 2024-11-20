@@ -7,8 +7,8 @@ import Email from '../dbs/config'
 import axios from './utils/axios'
 import jwt from 'jsonwebtoken'
 import { jwtConfig } from '../common/config'
-import crypto from 'crypto'
-import { resDataFailed, resOk } from '../common/utils'
+import sillyDatetime from 'silly-datetime'
+import { resDataFailed, resDataOk, resOk } from '../common/utils'
 let router = new Router({
     prefix: '/users'
 })
@@ -85,37 +85,6 @@ router.post('/signup', async ctx => {
     }
 
 })
-// 用户登录
-// router.post('/signin_old', async (ctx, next) => {
-
-//     return Passport.authenticate('local', function (err, user, info, status) {
-//         if (err) {
-//             ctx.body = {
-//                 code: -1,
-//                 msg: err
-//             };
-//         } else {
-//             if (user) {
-//                 ctx.body = {
-//                     code: 0,
-//                     msg: "登录成功",
-//                     user
-//                 };
-//                 return ctx.login(user);
-//             } else {
-//                 ctx.body = {
-//                     code: 1,
-//                     // msg: info,
-//                     // 用户信息和私钥
-//                     body: jwt.sign(res, 'test', {
-//                         expiresIn: '2h', // 过期时间2小时
-//                     }),
-//                 };
-//             }
-//         }
-//     })(ctx, next)
-
-// })
 
 //用户登录新
 router.post('/signin', async (ctx, next) => {
@@ -131,11 +100,13 @@ router.post('/signin', async (ctx, next) => {
     if (result) {
         const token = jwt.sign(
             {
-                name: result.username,
-                _id: result._id
+                id: result._id,
+                username: result.username,
+                avatar: result.avatar,
+                time: sillyDatetime.format(new Date(), "YYYY-MM-DD HH:mm")
             },
             jwtConfig.tokenKey, // secret
-            { expiresIn: '2h' } // 60 * 60 s
+            { expiresIn: '144h' } // 60 * 60 s
         );
         return ctx.body = resOk({ msg: `登录成功`, data: token })
     } else {
@@ -243,22 +214,8 @@ router.get("/exit", async (ctx, next) => {
 });
 
 router.get("/getUser", async (ctx, next) => {
-    console.log('isAuthenticated', ctx.isAuthenticated());
-    if (ctx.isAuthenticated()) {
-        const { username, email, avatar } = ctx.session.passport.user;
-        ctx.body = {
-            username,
-            email,
-            avatar
-        };
-    } else {
-        ctx.body = {
-            username: "",
-            email: "",
-            avatar: "",
-            msg: 'is not Authenticated'
-        };
-    }
+    // const res = await User.findOne({ _id: ctx.state.user._id })
+    ctx.body = resDataOk(ctx.state.user)
 });
 
 export default router;
