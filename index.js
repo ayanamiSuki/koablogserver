@@ -32,6 +32,7 @@ async function start() {
   //设定
 
   app.use(koaStatic(__dirname + '/static'));
+  app.use(koaStatic(__dirname + '/dist'));
   app.keys = ['aya', 'keys'];
   app.proxy = true;
 
@@ -93,21 +94,11 @@ async function start() {
   })
 
   // 鉴权 注意：放在路由前面
-  app.use(async (ctx, next) => {
-    // 检查请求路径是否以'/static/'开头（或根据你的实际静态资源路径调整）
-    if (!ctx.path.startsWith('/uploads/')) {
-      // 非静态资源路径，进行JWT验证
-      await koajwt({
-        secret: jwtConfig.tokenKey
-      }).unless({ // 配置白名单
-        path: jwtConfig.path
-      })(ctx, next);
-    } else {
-      // 静态资源路径，直接放行
-      await next();
-    }
-
-  })
+  app.use(koajwt({
+    secret: jwtConfig.tokenKey
+  }).unless({ // 配置白名单
+    path: jwtConfig.path
+  }))
 
   // 鉴权获取token的数据
   app.use(async (ctx, next) => {

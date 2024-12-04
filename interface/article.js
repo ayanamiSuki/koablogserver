@@ -2,7 +2,7 @@ import Router from '@koa/router';
 import Article from '../dbs/models/article';
 import sillyDatetime from 'silly-datetime';
 import multer from '@koa/multer';
-import { resDataOk } from '../common/utils';
+import { getPlainText, resDataOk } from '../common/utils';
 
 const router = new Router({
   prefix: '/article',
@@ -58,12 +58,27 @@ router.post('/editArticle', async ctx => {
     ctx.body = {
       code: 0,
       msg: '上传成功',
+      data: true
+    };
+  }
+});
+router.post('/deleteArticle', async ctx => {
+  const { title, content, bg, id } = ctx.request.body;
+  let result = await Article.findOneAndUpdate({ _id: id }, { title, content, bg, deleteFlag: true }, { new: true });
+  if (result) {
+    ctx.body = {
+      code: 0,
+      msg: '删除成功',
+      data: true
     };
   }
 });
 router.get('/getarticle', async ctx => {
-  const result = await Article.find();
-  ctx.body = resDataOk(result)
+  const result = await Article.find({ deleteFlag: false });
+  ctx.body = resDataOk(result.map(item => {
+    item.content = ''
+    return item;
+  }))
   //   let { page } = ctx.request.query;
   //   let start = (page - 1) * 10;
   //   let result = await Article.find({}, { content: 0 }).sort({ _id: -1 }).skip(start).limit(10);
@@ -80,23 +95,16 @@ router.get('/getarticle', async ctx => {
   //   }
 });
 router.get('/myArticle', async ctx => {
-  const { username } = ctx.session.passport.user;
-  let result = await Article.find({ user: username }, { content: 0 }).sort({ _id: -1 }).limit(10);
+  const { username } = ctx.state.user;
+  let result = await Article.find({ user: username, deleteFlag: false }, { content: 0 }).sort({ _id: -1 }).limit(10);
   ctx.body = {
     code: 0,
     msg: '请求成功',
-    data: result,
+    data: result.map(item => {
+       item.content = ''
+      return item;
+    }),
   };
-});
-router.get('/getCarousel', async ctx => {
-  let result = await Article.find({}, { content: 0 }).sort({ _id: -1 }).limit(4);
-  if (result) {
-    ctx.body = {
-      code: 0,
-      msg: '请求成功',
-      data: result,
-    };
-  }
 });
 router.get('/getarticleDetail', async ctx => {
   let req = ctx.request.query;

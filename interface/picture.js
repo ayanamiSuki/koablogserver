@@ -97,18 +97,7 @@ router.get("/myArticle", async ctx => {
     data: result
   };
 });
-router.get("/getCarousel", async ctx => {
-  let result = await Article.find({}, { content: 0 })
-    .sort({ _id: -1 })
-    .limit(4);
-  if (result) {
-    ctx.body = {
-      code: 0,
-      msg: "请求成功",
-      data: result
-    };
-  }
-});
+
 router.get("/getarticleDetail", async ctx => {
   let req = ctx.request.query;
   let result = await Article.findByIdAndUpdate(

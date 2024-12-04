@@ -17,7 +17,7 @@ const UserSchema = new Schema({
     },
     avatar: {
         type: String,
-        default: 'https://wx3.sinaimg.cn/mw690/9afd6f06gy1gct7ybm61qj20hs0p4gni.jpg'
+        default: 'https://github.githubassets.com/assets/mona-loading-default-c3c7aad1282f.gif'
     }
 })
 

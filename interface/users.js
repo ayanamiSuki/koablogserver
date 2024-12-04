@@ -8,7 +8,7 @@ import axios from './utils/axios'
 import jwt from 'jsonwebtoken'
 import { jwtConfig } from '../common/config'
 import sillyDatetime from 'silly-datetime'
-import { resDataFailed, resDataOk, resOk } from '../common/utils'
+import { resMsgFailed, resDataOk, resOk } from '../common/utils'
 let router = new Router({
     prefix: '/users'
 })
@@ -110,7 +110,7 @@ router.post('/signin', async (ctx, next) => {
         );
         return ctx.body = resOk({ msg: `登录成功`, data: token })
     } else {
-        return ctx.body = resDataFailed('用户名或密码错误')
+        return ctx.body = resMsgFailed('用户名或密码错误')
     }
 })
 router.post("/changePass", async ctx => {
@@ -124,10 +124,10 @@ router.post("/changePass", async ctx => {
             }
 
         } else {
-            return ctx.body = resDataFailed('验证码错误')
+            return ctx.body = resMsgFailed('验证码错误')
         }
     } else {
-        return ctx.body = resDataFailed('验证码不存在')
+        return ctx.body = resMsgFailed('验证码不存在')
     }
 })
 

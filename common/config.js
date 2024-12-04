@@ -4,7 +4,9 @@ export const jwtConfig = {
         /\/users\/signup/,
         /\/users\/signin/,
         /\/article\/getarticle/,
-        /\/article\/getCarousel/,
         /\/article\/recommend/,
+        /\/comment\/getComment/,
+        /^\/static\/.*/,
+        /^\/dist\/.*/,
     ]
 }
