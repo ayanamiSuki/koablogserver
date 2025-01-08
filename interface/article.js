@@ -2,7 +2,7 @@ import Router from '@koa/router';
 import Article from '../dbs/models/article';
 import sillyDatetime from 'silly-datetime';
 import multer from '@koa/multer';
-import { getPlainText, resDataOk } from '../common/utils';
+import { resDataOk, resMsgFailed, resMsgOk } from '../common/utils';
 
 const router = new Router({
   prefix: '/article',
@@ -30,8 +30,8 @@ router.post('/image', upload.single('file'), async ctx => {
     },
   };
 });
-
-router.post('/uploadarticle', async ctx => {
+// 上传文章
+router.post('/uploadArticle', async ctx => {
   const { title, content, bg } = ctx.request.body;
   let time = sillyDatetime.format(new Date(), 'YYYY-MM-DD HH:mm');
   let user = ctx.state.user.username;
@@ -51,9 +51,10 @@ router.post('/uploadarticle', async ctx => {
     };
   }
 });
+// 编辑文章
 router.post('/editArticle', async ctx => {
   const { title, content, bg, id } = ctx.request.body;
-  let result = await Article.findOneAndUpdate({ _id: id }, { title, content, bg }, { new: true });
+  let result = await Article.findOneAndUpdate({ _id: id }, { title, content, bg, examine: false }, { new: true });
   if (result) {
     ctx.body = {
       code: 0,
@@ -62,6 +63,7 @@ router.post('/editArticle', async ctx => {
     };
   }
 });
+// 删除文章
 router.post('/deleteArticle', async ctx => {
   const { title, content, bg, id } = ctx.request.body;
   let result = await Article.findOneAndUpdate({ _id: id }, { title, content, bg, deleteFlag: true }, { new: true });
@@ -73,27 +75,23 @@ router.post('/deleteArticle', async ctx => {
     };
   }
 });
-router.get('/getarticle', async ctx => {
-  const result = await Article.find({ deleteFlag: false });
-  ctx.body = resDataOk(result.map(item => {
-    item.content = ''
-    return item;
-  }))
-  //   let { page } = ctx.request.query;
-  //   let start = (page - 1) * 10;
-  //   let result = await Article.find({}, { content: 0 }).sort({ _id: -1 }).skip(start).limit(10);
-  //   let count = await Article.countDocuments();
-  //   if (result.length) {
-  //     ctx.body = {
-  //       code: 0,
-  //       msg: '请求成功',
-  //       data: {
-  //         count,
-  //         result,
-  //       },
-  //     };
-  //   }
+// 分页获取文章
+router.get('/getArticle', async ctx => {
+  const { currentPage = 1, pageSize = 20 } = ctx.request.query;
+  const start = (currentPage - 1) * 10;
+  const result = await Article.find({ examine: true, deleteFlag: false }, { content: 0 }).sort({ _id: -1 }).skip(start).limit(pageSize);
+  const count = await Article.countDocuments({ examine: true, deleteFlag: false });
+  ctx.body = resDataOk({
+    currentPage: currentPage,
+    pageSize: pageSize,
+    total: count,
+    list: result.map(item => {
+      item.content = ''
+      return item;
+    })
+  })
 });
+// 我的文章
 router.get('/myArticle', async ctx => {
   const { username } = ctx.state.user;
   let result = await Article.find({ user: username, deleteFlag: false }, { content: 0 }).sort({ _id: -1 }).limit(10);
@@ -101,12 +99,13 @@ router.get('/myArticle', async ctx => {
     code: 0,
     msg: '请求成功',
     data: result.map(item => {
-       item.content = ''
+      item.content = ''
       return item;
     }),
   };
 });
-router.get('/getarticleDetail', async ctx => {
+// 文章详情
+router.get('/getArticleDetail', async ctx => {
   let req = ctx.request.query;
   let result = await Article.findByIdAndUpdate({ _id: req._id }, { $inc: { click: 1 } }, { new: true, upsert: true });
   if (result) {
@@ -166,9 +165,29 @@ router.get('/recommend', async ctx => {
     data: []
   };
 });
-
-function random(n, m) {
-  return Math.round(Math.random() * (m - n) + n);
-}
+// 获取要审核的文章
+router.get(`/getExamineArticle`, async ctx => {
+  const { username } = ctx.state.user;
+  if (username !== 'aya') {
+    ctx.body = resDataOk([])
+    return false
+  }
+  const result = await Article.find({ examine: false, deleteFlag: false }, { title: 1, _id: 1, user: 1 });
+  ctx.body = resDataOk(result)
+})
+// 审核文章
+router.get(`/examineArticle`, async ctx => {
+  const { username } = ctx.state.user;
+  if (username !== 'aya') {
+    ctx.body = resMsgFailed(`你没有权限`)
+  }
+  const { id } = ctx.request.query;
+  const result = await Article.findByIdAndUpdate(id, { $set: { examine: true } }, { new: true });
+  if (result) {
+    ctx.body = resMsgOk(`操作成功`)
+  } else {
+    ctx.body = resMsgFailed(`操作失败`)
+  }
+})
 
 export default router;

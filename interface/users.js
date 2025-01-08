@@ -8,7 +8,7 @@ import axios from './utils/axios'
 import jwt from 'jsonwebtoken'
 import { jwtConfig } from '../common/config'
 import sillyDatetime from 'silly-datetime'
-import { resMsgFailed, resDataOk, resOk } from '../common/utils'
+import { resMsgFailed, resDataOk, resOk, resFailed, resMsgOk } from '../common/utils'
 let router = new Router({
     prefix: '/users'
 })
@@ -24,64 +24,39 @@ router.post('/signup', async ctx => {
         const saveExpire = await Store.hget(`nodemail:${username}`, 'expire');
         if (code === saveCode) {
             if (new Date().getTime - saveExpire > 0) {
-                ctx.body = {
-                    code: -1,
-                    msg: '验证码已经过期，请重试'
-                }
+                ctx.body = resMsgFailed('验证码已经过期，请重试')
                 return false;
             }
         } else {
-            ctx.body = {
-                code: -1,
-                msg: '请填写正确的验证码'
-            }
+            ctx.body = resMsgFailed('验证码错误')
             return false;
         }
     } else {
-        ctx.body = {
-            code: -1,
-            msg: "请填写验证码"
-        };
+        ctx.body = resMsgFailed('请填写验证码')
         return false;
     }
     let user = await User.find({ username });
     if (user.length) {
-        ctx.body = {
-            code: -1,
-            msg: "用户名已经被注册"
-        };
+        ctx.body = resMsgFailed('用户名已存在')
         return false;
     }
-    // let e_mail = await User.find({ email });
-    // if (e_mail.length) {
-    //     ctx.body = {
-    //         code: -1,
-    //         msg: "邮箱已经被注册"
-    //     };
-    //     return false;
-    // }
+    let e_mail = await User.find({ email });
+    if (e_mail.length) {
+        ctx.body = resMsgFailed('邮箱已经被注册')
+        return false;
+    }
     let newUser = await User.create({
         username, password, email
     });
     if (newUser) {
         let res = await axios.post('/users/signin', { username, password })
         if (res.data.code === 0) {
-            ctx.body = {
-                code: 0,
-                msg: "注册成功",
-                user: res.data.user
-            };
+            ctx.body = resMsgOk('注册成功')
         } else {
-            ctx.body = {
-                code: -1,
-                msg: "error"
-            };
+            ctx.body = resMsgFailed('注册失败')
         }
     } else {
-        ctx.body = {
-            code: -1,
-            msg: "注册失败"
-        };
+        ctx.body = resMsgFailed('注册失败')
     }
 
 })
@@ -90,10 +65,7 @@ router.post('/signup', async ctx => {
 router.post('/signin', async (ctx, next) => {
     const data = ctx.request.body;
     if (!data.username || !data.password) {
-        return ctx.body = {
-            code: "-1",
-            msg: "参数不合法"
-        }
+        return ctx.body = resMsgFailed('用户名或密码不能为空')
     }
     const result = await User.findOne({ username: data.username, password: data.password });
     // const result = userList.find(item => item.username === data.username && item.password === crypto.createHash('md5').update(data.password).digest('hex'))
@@ -136,18 +108,13 @@ router.post("/verify", async (ctx, next) => {
     let userEmail = ctx.request.body.email;
     let ifUser = await User.find({ username });
     if (ifUser.length) {
-        ctx.body = {
-            code: -1,
-            msg: "用户名已经被注册"
-        };
+
+        ctx.body = resMsgFailed('用户名已存在')
         return false;
     }
     const saveExpire = await Store.hget(`nodemail:${username}`, "expire");
     if (saveExpire && new Date().getTime - saveExpire < 0) {
-        ctx.body = {
-            code: -1,
-            msg: "验证请求过于频繁，一分钟一次"
-        };
+        ctx.body = resMsgFailed('验证请求过于频繁，一分钟一次')
         return false;
     }
     let transporter = nodeMailer.createTransport({
@@ -187,29 +154,17 @@ router.post("/verify", async (ctx, next) => {
         }
     });
     if (errMsg) {
-        return ctx.body = {
-            code: 0,
-            msg: "发送注册邮件失败,原因:" + errMsg
-        };
+        return ctx.body = resMsgFailed("发送注册邮件失败,原因:" + errMsg)
     }
-    return ctx.body = {
-        code: 0,
-        msg: "验证码已发送，有效期5分钟"
-    };
+    return ctx.body = resMsgOk("验证码已发送，有效期5分钟")
 });
 
 router.get("/exit", async (ctx, next) => {
     await ctx.logout();
     if (!ctx.isAuthenticated()) {
-        ctx.body = {
-            code: 0,
-            msg: '您已退出登录'
-        };
+        ctx.body = resMsgOk('您已退出登录')
     } else {
-        ctx.body = {
-            code: -1,
-            msg: '操作失败！'
-        };
+        ctx.body = resMsgFailed('退出登录失败')
     }
 });
 

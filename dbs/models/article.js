@@ -31,6 +31,11 @@ const editorSchema = new Schema({
     deleteFlag :{
         type:Boolean,
         default:false,
+    },
+    // 是否审核
+    examine :{
+        type:Boolean,
+        default:false,
     }
 })
 export default mongoose.model('Article', editorSchema)

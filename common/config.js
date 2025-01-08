@@ -3,7 +3,8 @@ export const jwtConfig = {
     path: [
         /\/users\/signup/,
         /\/users\/signin/,
-        /\/article\/getarticle/,
+        /\/users\/verify/,
+        /\/article\/getArticle/,
         /\/article\/recommend/,
         /\/comment\/getComment/,
         /^\/static\/.*/,
